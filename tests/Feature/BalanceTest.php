@@ -71,4 +71,53 @@ class BalanceTest extends TestCase
             'balance' => $count + $this->user2Balance->balance,
         ]);
     }
+
+    public function testWriteOffForUser1(): void
+    {
+        $route = route('balance.write_off');
+
+        $count = 130.05;
+
+        $body = [
+            'user_id' => $this->user1->id,
+            'count' => $count,
+        ];
+
+        $response = $this->postJson($route, $body);
+
+        $response->assertStatus(400);
+    }
+
+    public function writeOffUser2Provider(): array
+    {
+        return [
+            [50.0, 200],
+            [100.0, 200],
+            [150.0, 400],
+        ];
+    }
+
+    /**
+     * @dataProvider writeOffUser2Provider
+     */
+    public function testWriteOffForUser2(float $count, int $statusCode): void
+    {
+        $route = route('balance.write_off');
+
+        $body = [
+            'user_id' => $this->user2->id,
+            'count' => $count,
+        ];
+
+        $response = $this->postJson($route, $body);
+
+        $response->assertStatus($statusCode);
+
+        if ($statusCode === 200) {
+            $this->assertDatabaseHas('balances', [
+                'user_id' => $this->user2->id,
+                'balance' => $this->user2Balance->balance - $count,
+            ]);
+        }
+    }
 }
