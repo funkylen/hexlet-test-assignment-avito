@@ -4,8 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Balance;
 use App\Models\User;
+use App\Services\BalanceService;
+use App\Services\CurrencyConverterService;
 use DB;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
+use Mockery\MockInterface;
 use Tests\TestCase;
 
 class BalanceTest extends TestCase
@@ -42,7 +46,7 @@ class BalanceTest extends TestCase
 
         $response = $this->postJson($route, $body);
 
-        $response->assertOk();
+        $response->assertCreated();
 
         $this->assertDatabaseHas('balances', [
             'user_id' => $this->user1->id,
@@ -130,6 +134,7 @@ class BalanceTest extends TestCase
             'balance' => 0,
         ]);
     }
+
     public function testShowForUser2(): void
     {
         $route = route('balance.show', $this->user2);
@@ -182,5 +187,47 @@ class BalanceTest extends TestCase
                 'balance' => $this->user2Balance->balance - $count,
             ]);
         }
+    }
+
+    public function testShowWithCurrency(): void
+    {
+        $currency = 'USD';
+        $rate = 60.0;
+
+        $this->instance(
+            CurrencyConverterService::class,
+            Mockery::mock(
+                CurrencyConverterService::class,
+                function (MockInterface $mock) use ($currency, $rate) {
+                    $rate = 60.0;
+                    $mock->shouldReceive('convert')
+                        ->once()
+                        ->andReturn([
+                            'from_currency' => BalanceService::APP_CURRENCY,
+                            'from_amount' => $this->user2Balance->balance,
+
+                            'to_currency' => $currency,
+                            'to_amount' => $this->user2Balance->balance / $rate,
+
+                            'rate' => $rate,
+                        ]);
+                }
+            )
+        );
+
+        $route = route('balance.show', [
+            'user' => $this->user2,
+            'currency' => $currency,
+        ]);
+
+        $response = $this->getJson($route);
+
+        $response->assertOk();
+
+        $response->assertJsonFragment([
+            'user_id' => $this->user2->id,
+            'balance' => $this->user2Balance->balance / $rate,
+            'currency' => $currency,
+        ]);
     }
 }

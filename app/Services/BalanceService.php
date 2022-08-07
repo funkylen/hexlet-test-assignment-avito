@@ -10,6 +10,8 @@ use Exception;
 
 class BalanceService
 {
+    public const APP_CURRENCY = 'RUB';
+
     public function add(User $user, float $count): Balance
     {
         $balance = Balance::firstOrNew([
