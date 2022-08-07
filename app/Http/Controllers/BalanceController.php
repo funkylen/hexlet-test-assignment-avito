@@ -2,49 +2,31 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BalanceRequest;
 use App\Models\Balance;
 use App\Models\User;
+use App\Services\BalanceService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 class BalanceController extends Controller
 {
-    public function add(Request $request, User $user): JsonResponse
+    private BalanceService $balanceService;
+
+    public function __construct(BalanceService $balanceService)
     {
-        $request->validate([
-            'count' => 'required|numeric|gt:0',
-        ]);
+        $this->balanceService = $balanceService;
+    }
 
-        $balance = Balance::firstOrNew([
-            'user_id' => $user->id,
-        ]);
-
-        $balance->balance += $request->get('count');
-
-        $balance->save();
+    public function add(BalanceRequest $request, User $user): JsonResponse
+    {
+        $balance = $this->balanceService->add($user, $request->get('count'));
 
         return response()->json($balance);
     }
 
-    public function writeOff(Request $request, User $user): JsonResponse
+    public function writeOff(BalanceRequest $request, User $user): JsonResponse
     {
-        $request->validate([
-            'count' => 'required|numeric|gt:0',
-        ]);
-
-        $balance = Balance::firstOrNew([
-            'user_id' => $user->id,
-        ]);
-
-        $balance->balance -= $request->get('count');
-
-        if ($balance->balance < 0) {
-            return response()->json([
-                'message' => __('Insufficient funds.'),
-            ], 400);
-        }
-
-        $balance->save();
+        $balance = $this->balanceService->writeOff($user, $request->get('count'));
 
         return response()->json($balance);
     }
@@ -56,5 +38,12 @@ class BalanceController extends Controller
         ]);
 
         return response()->json($balance);
+    }
+
+    public function sendTo(BalanceRequest $request, User $sender, User $recipient)
+    {
+        $result = $this->balanceService->sendTo($sender, $recipient, $request->get('count'));
+
+        return response()->json($result);
     }
 }

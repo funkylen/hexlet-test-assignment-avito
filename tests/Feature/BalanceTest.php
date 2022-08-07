@@ -143,4 +143,44 @@ class BalanceTest extends TestCase
             'balance' => $this->user2Balance->balance,
         ]);
     }
+
+
+    public function sendToUserProvider(): array
+    {
+        return [
+            [50.0, 200],
+            [100.0, 200],
+            [150.0, 400],
+        ];
+    }
+
+    /**
+     * @dataProvider sendToUserProvider
+     */
+    public function testSendToUser(float $count, int $statusCode): void
+    {
+        $route = route('balance.send_to', [
+            'sender' => $this->user2,
+            'recipient' => $this->user1,
+        ]);
+
+        $body = [
+            'count' => $count,
+        ];
+
+        $response = $this->postJson($route, $body);
+
+        $response->assertStatus($statusCode);
+
+        if ($statusCode === 200) {
+            $this->assertDatabaseHas('balances', [
+                'user_id' => $this->user1->id,
+                'balance' => $count,
+            ]);
+            $this->assertDatabaseHas('balances', [
+                'user_id' => $this->user2->id,
+                'balance' => $this->user2Balance->balance - $count,
+            ]);
+        }
+    }
 }
