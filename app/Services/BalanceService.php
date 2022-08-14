@@ -5,8 +5,6 @@ namespace App\Services;
 use App\Exceptions\BalanceServiceException;
 use App\Models\Balance;
 use App\Models\User;
-use DB;
-use Exception;
 
 class BalanceService
 {
@@ -44,22 +42,13 @@ class BalanceService
 
     public function sendTo(User $sender, User $recipient, float $count): array
     {
-        try {
-            DB::beginTransaction();
+        $senderBalance = $this->writeOff($sender, $count);
 
-            $senderBalance = $this->writeOff($sender, $count);
-            $recipientBalance = $this->add($recipient, $count);
-
-            DB::commit();
-        } catch (Exception $exception) {
-            DB::rollBack();
-
-            throw $exception;
-        }
+        $recipientBalance = $this->add($recipient, $count);
 
         return [
             'sender_balance' => $senderBalance,
-            'reciepent_balance' => $recipientBalance,
+            'recipient_balance' => $recipientBalance,
         ];
     }
 }

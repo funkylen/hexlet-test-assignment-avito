@@ -18,7 +18,7 @@ class BalanceFactory extends Factory
     public function definition()
     {
         return [
-            'balance' => (float) rand(0, 100000),
+            'balance' => (float) random_int(0, 100000),
             'user_id' => fn() => User::factory()->create()->id,
         ];
     }

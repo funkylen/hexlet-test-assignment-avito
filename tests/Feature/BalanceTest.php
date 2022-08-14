@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\TransactionType;
 use App\Models\Balance;
 use App\Models\User;
 use App\Services\BalanceService;
@@ -52,6 +53,13 @@ class BalanceTest extends TestCase
             'user_id' => $this->user1->id,
             'balance' => 130.05,
         ]);
+
+        $this->assertDatabaseHas('transactions', [
+            'type' => TransactionType::Add,
+            'count' => $body['count'],
+            'info->user_id' => $this->user1->id,
+            'created_at' => now()->toDateTimeString(),
+        ]);
     }
 
     public function testAddForUser2(): void
@@ -71,6 +79,13 @@ class BalanceTest extends TestCase
         $this->assertDatabaseHas('balances', [
             'user_id' => $this->user2->id,
             'balance' => $count + $this->user2Balance->balance,
+        ]);
+
+        $this->assertDatabaseHas('transactions', [
+            'type' => TransactionType::Add,
+            'count' => $count,
+            'info->user_id' => $this->user2->id,
+            'created_at' => now()->toDateTimeString(),
         ]);
     }
 
@@ -117,6 +132,13 @@ class BalanceTest extends TestCase
             $this->assertDatabaseHas('balances', [
                 'user_id' => $this->user2->id,
                 'balance' => $this->user2Balance->balance - $count,
+            ]);
+
+            $this->assertDatabaseHas('transactions', [
+                'type' => TransactionType::WriteOff,
+                'count' => $count,
+                'info->user_id' => $this->user2->id,
+                'created_at' => now()->toDateTimeString(),
             ]);
         }
     }
@@ -185,6 +207,14 @@ class BalanceTest extends TestCase
             $this->assertDatabaseHas('balances', [
                 'user_id' => $this->user2->id,
                 'balance' => $this->user2Balance->balance - $count,
+            ]);
+
+            $this->assertDatabaseHas('transactions', [
+                'type' => TransactionType::SendTo,
+                'count' => $count,
+                'info->sender_balance->user_id' => $this->user2->id,
+                'info->recipient_balance->user_id' => $this->user1->id,
+                'created_at' => now()->toDateTimeString(),
             ]);
         }
     }
